@@ -1401,6 +1401,21 @@ class ConfigBuilderTest extends Specification {
         config.notification.enabled == true
         config.notification.to == 'yo@nextflow.com'
     }
+
+    def 'should configure dryrun' () {
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.dryRun
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(dryRun: true)).build()
+        then:
+        config.dryRun == true
+    }
     
     def 'should merge profiles' () {
         given:

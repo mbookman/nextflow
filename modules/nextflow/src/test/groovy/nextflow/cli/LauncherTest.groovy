@@ -250,6 +250,10 @@ class LauncherTest extends Specification {
 
         launcher.normalizeArgs('run','-dsl2', '-x') == ['run', '-dsl2','true', '-x']
 
+        launcher.normalizeArgs('run','-dry-run', '-x') == ['run', '-dry-run','true', '-x']
+        launcher.normalizeArgs('run','-dry-run', 'true', '-x') == ['run', '-dry-run', 'true', '-x']
+        launcher.normalizeArgs('run','-dry-run', 'false', '-x') == ['run', '-dry-run', 'false', '-x']
+
         launcher.normalizeArgs( script.toAbsolutePath().toString(), '--x=1' ) == ['run', script.toAbsolutePath().toString(), '--x=1']
 
         launcher.normalizeArgs('--foo', '--bar x') == ['--foo=--bar x']

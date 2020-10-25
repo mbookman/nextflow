@@ -146,6 +146,11 @@ class Session implements ISession {
     String runName
 
     /**
+     * Enable dryRun mode
+     */
+    boolean dryRun
+
+    /**
      * Folder(s) containing libs and classes to be added to the classpath
      */
     List<Path> libDir
@@ -304,6 +309,9 @@ class Session implements ISession {
         // -- set the run name
         this.runName = config.runName ?: NameGenerator.next()
         log.debug "Run name: $runName"
+
+        // -- dry run
+        this.dryRun = config.dryRun
 
         // -- normalize taskConfig object
         if( config.process == null ) config.process = [:]

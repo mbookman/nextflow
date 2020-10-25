@@ -610,4 +610,41 @@ class ScriptRunnerTest extends Specification {
     }
 
 
+    def 'test dry run'() {
+
+        given:
+        /*
+         * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
+         */
+        def config = '''
+            executor = 'nope'
+            dryRun = true
+            '''
+
+        def script = '''
+            process hola {
+
+                dryrun:
+                 /echo foo/
+                 
+                script:
+                  /echo bar/
+            }
+            '''
+
+        and:
+        def session = new Session(new ConfigParser().parse(config))
+        and:
+        def runner = new TestScriptRunner(session).setScript(script)
+
+        when:
+        runner.execute()
+
+        // when no outputs are specified, the 'stdout' is the default output
+        then:
+        runner.result instanceof DataflowQueue
+        runner.result.val == "echo foo"
+
+    }
+
 }

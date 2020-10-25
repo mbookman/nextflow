@@ -80,6 +80,16 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
 
+    @Deprecated final static private String WORKFLOW_GET = 'get'
+    @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
+    final static private String WORKFLOW_TAKE = 'take'
+    final static private String WORKFLOW_EMIT = 'emit'
+    final static private String WORKFLOW_MAIN = 'main'
+    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN]
+
+    final static public String PROCESS_WHEN = 'when'
+    final static public String PROCESS_DRYRUN = 'dryrun'
+
     static public String OUT_PREFIX = '$out'
 
     static private Set<String> RESERVED_NAMES
@@ -109,12 +119,6 @@ class NextflowDSLImpl implements ASTTransformation {
     @CompileStatic
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
 
-        @Deprecated final static private String WORKFLOW_GET = 'get'
-        @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
-        final static private String WORKFLOW_TAKE = 'take'
-        final static private String WORKFLOW_EMIT = 'emit'
-        final static private String WORKFLOW_MAIN = 'main'
-        final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN]
 
         final private SourceUnit unit
 
@@ -576,6 +580,10 @@ class NextflowDSLImpl implements ASTTransformation {
                 List<Statement> whenStatements = []
                 def whenSource = new StringBuilder()
 
+                List<Statement> dryRunStatements = []
+                def dryRunSource = new StringBuilder()
+
+
                 def iterator = block.getStatements().iterator()
                 while( iterator.hasNext() ) {
 
@@ -615,8 +623,14 @@ class NextflowDSLImpl implements ASTTransformation {
                             readSource(stm,source,unit)
                             break
 
+                        case PROCESS_DRYRUN:
+                            iterator.remove()
+                            dryRunStatements << stm
+                            readSource(stm,dryRunSource,unit)
+                            break
+
                         // capture the statements in a when guard and remove from the current block
-                        case 'when':
+                        case PROCESS_WHEN:
                             if( iterator.hasNext() ) {
                                 iterator.remove()
                                 whenStatements << stm
@@ -653,6 +667,13 @@ class NextflowDSLImpl implements ASTTransformation {
                  */
                 if( whenStatements ) {
                     addWhenGuardCall(whenStatements, whenSource, block)
+                }
+
+                /*
+                 * add try `dryrun` block if found
+                 */
+                if( dryRunStatements ) {
+                    addDryRunCall(dryRunStatements, dryRunSource, block)
                 }
 
                 /*
@@ -713,6 +734,14 @@ class NextflowDSLImpl implements ASTTransformation {
          * See {@link nextflow.processor.TaskConfig#getGuard(java.lang.String)}
          */
         protected void addWhenGuardCall( List<Statement> statements, StringBuilder source, BlockStatement parent ) {
+            createBlock0(PROCESS_WHEN, statements, source, parent)
+        }
+
+        protected void addDryRunCall( List<Statement> statements, StringBuilder source, BlockStatement parent ) {
+            createBlock0(PROCESS_DRYRUN, statements, source, parent)
+        }
+
+        protected void createBlock0( String blockName, List<Statement> statements, StringBuilder source, BlockStatement parent ) {
             // wrap the code block into a closure expression
             def block = new BlockStatement(statements, new VariableScope(parent.variableScope))
             def closure = new ClosureExpression( Parameter.EMPTY_ARRAY, block )
@@ -725,10 +754,10 @@ class NextflowDSLImpl implements ASTTransformation {
             def whenObj = createX( TaskClosure, newArgs )
 
             // creates a method call expression for the method `when`
-            def method = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, 'when', whenObj)
+            def method = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, blockName, whenObj)
             parent.getStatements().add(0, new ExpressionStatement(method))
-
         }
+
         /**
          * Wrap the user provided piece of code, either a script or a closure with a {@code BodyDef} object
          *

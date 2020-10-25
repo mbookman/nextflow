@@ -513,6 +513,9 @@ class ConfigBuilder {
         if( cmdRun.runName )
             config.runName = cmdRun.runName
 
+        if( cmdRun.dryRun )
+            config.dryRun = cmdRun.dryRun
+
         // -- sets the working directory
         if( cmdRun.workDir )
             config.workDir = cmdRun.workDir
